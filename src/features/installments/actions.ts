@@ -4,6 +4,8 @@ import { revalidatePath } from 'next/cache'
 
 import { requireUser } from '@/lib/auth/server'
 import { db } from '@/lib/db/prisma'
+import { formatKzt } from '@/lib/money'
+import { notifyManagers } from '@/features/notifications/lib/notify'
 
 import { createPlanSchema } from './schemas'
 
@@ -54,7 +56,10 @@ export async function createPlanAction(
         tenantId: user.tenantId,
         endedAt: null,
       },
-      include: { student: { select: { parentId: true } } },
+      include: {
+        student: { select: { parentId: true, fullName: true } },
+        course: { select: { name: true } },
+      },
     })
     if (!enrollment) {
       return { ok: false, message: 'Зачисление не найдено или уже завершено' }
@@ -91,6 +96,17 @@ export async function createPlanAction(
         })
       }
       return plan
+    })
+
+    await notifyManagers({
+      tenantId: user.tenantId,
+      type: 'PLAN_CREATED',
+      title: `Рассрочка: ${enrollment.student.fullName} · ${enrollment.course.name}`,
+      body: `${count} платежей по ${formatKzt(monthly)} = ${formatKzt(Number(total))}`,
+      link: `/parents/${enrollment.student.parentId}`,
+      triggerType: 'InstallmentPlan',
+      triggerId: result.id,
+      excludeUserId: user.id,
     })
 
     revalidatePath(`/parents/${enrollment.student.parentId}`)

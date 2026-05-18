@@ -4,6 +4,8 @@ import { revalidatePath } from 'next/cache'
 
 import { requireUser } from '@/lib/auth/server'
 import { db } from '@/lib/db/prisma'
+import { formatKzt } from '@/lib/money'
+import { notifyManagers } from '@/features/notifications/lib/notify'
 
 import {
   markPaidSchema,
@@ -64,13 +66,16 @@ export async function recordPaymentAction(
     return { ok: false, fieldErrors: flatten(parsed.error) }
   }
 
-  const parent = await validateParent(user.tenantId, parentId)
-  if (!parent) return { ok: false, message: 'Семья не найдена' }
+  const parentRow = await db.parent.findFirst({
+    where: { id: parentId, tenantId: user.tenantId, deletedAt: null },
+    select: { id: true, fullName: true },
+  })
+  if (!parentRow) return { ok: false, message: 'Семья не найдена' }
   if (!(await validateEnrollment(user.tenantId, parsed.data.enrollmentId))) {
     return { ok: false, fieldErrors: { enrollmentId: 'Зачисление не найдено' } }
   }
 
-  await db.payment.create({
+  const payment = await db.payment.create({
     data: {
       tenantId: user.tenantId,
       parentId,
@@ -82,6 +87,17 @@ export async function recordPaymentAction(
       reference: parsed.data.reference ?? null,
       notes: parsed.data.notes ?? null,
     },
+  })
+
+  await notifyManagers({
+    tenantId: user.tenantId,
+    type: 'PAYMENT_RECEIVED',
+    title: `Платёж: ${parentRow.fullName} · ${formatKzt(parsed.data.amount)}`,
+    body: parsed.data.method ? `Метод: ${parsed.data.method}` : null,
+    link: `/parents/${parentId}`,
+    triggerType: 'Payment',
+    triggerId: payment.id,
+    excludeUserId: user.id,
   })
 
   revalidatePath(`/parents/${parentId}`)
@@ -148,9 +164,16 @@ export async function markPaidAction(input: {
 
   const payment = await db.payment.findFirst({
     where: { id: parsed.data.paymentId, tenantId: user.tenantId },
-    select: { id: true, parentId: true },
+    select: {
+      id: true,
+      parentId: true,
+      amount: true,
+      paidAt: true,
+      parent: { select: { fullName: true } },
+    },
   })
   if (!payment) return { ok: false as const, message: 'Платёж не найден' }
+  const wasUnpaid = !payment.paidAt
 
   await db.payment.update({
     where: { id: payment.id },
@@ -160,6 +183,19 @@ export async function markPaidAction(input: {
       reference: parsed.data.reference ?? null,
     },
   })
+
+  if (wasUnpaid) {
+    await notifyManagers({
+      tenantId: user.tenantId,
+      type: 'PAYMENT_RECEIVED',
+      title: `Платёж: ${payment.parent.fullName} · ${formatKzt(payment.amount)}`,
+      body: parsed.data.method ? `Метод: ${parsed.data.method}` : null,
+      link: `/parents/${payment.parentId}`,
+      triggerType: 'Payment',
+      triggerId: payment.id,
+      excludeUserId: user.id,
+    })
+  }
 
   revalidatePath(`/parents/${payment.parentId}`)
   revalidatePath('/payments')

@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation'
 
 import { requireUser } from '@/lib/auth/server'
 import { db } from '@/lib/db/prisma'
+import { notifyUser } from '@/features/notifications/lib/notify'
 
 import { logActivity } from './lib/activity'
 import { ensureParentForLead } from './lib/convert'
@@ -198,6 +199,20 @@ export async function updateLeadAction(
         toUserId: parsed.data.assignedTo ?? null,
       },
     })
+    if (parsed.data.assignedTo && parsed.data.assignedTo !== user.id) {
+      await notifyUser({
+        tenantId: user.tenantId,
+        userId: parsed.data.assignedTo,
+        type: 'LEAD_ASSIGNED',
+        title: `Назначен лид: ${parsed.data.parentName}`,
+        body: parsed.data.childName
+          ? `Ребёнок: ${parsed.data.childName}`
+          : `Телефон: ${parsed.data.parentPhone}`,
+        link: `/leads/${id}`,
+        triggerType: 'LeadAssignment',
+        triggerId: `${id}:${parsed.data.assignedTo}:${Date.now()}`,
+      })
+    }
   }
   const prevAt = existing.nextContactAt?.toISOString() ?? null
   const nextAt = parsed.data.nextContactAt?.toISOString() ?? null

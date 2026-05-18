@@ -3,6 +3,7 @@ import { LogOut } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { signOut } from '@/auth'
+import { NotificationBell } from '@/features/notifications/components/notification-bell'
 
 export function Topbar({ email, role }: { email: string; role: string }) {
   const initials = email.slice(0, 2).toUpperCase()
@@ -11,6 +12,7 @@ export function Topbar({ email, role }: { email: string; role: string }) {
     <header className="flex h-14 items-center justify-between border-b border-border bg-background px-5">
       <div className="text-sm text-muted-foreground">{labelForRole(role)}</div>
       <div className="flex items-center gap-3">
+        <NotificationBell />
         <div className="flex items-center gap-2.5 text-sm">
           <Avatar size="sm">
             <AvatarFallback>{initials}</AvatarFallback>

@@ -23,6 +23,7 @@ import { endEnrollmentAction } from '@/features/enrollments/actions'
 import { AddEnrollmentForm } from '@/features/enrollments/components/add-enrollment-form'
 import { CreatePlanForm } from '@/features/installments/components/create-plan-form'
 import { PlanSummary } from '@/features/installments/components/plan-summary'
+import { EditParentForm } from '@/features/parents/components/edit-parent-form'
 import { getParent } from '@/features/parents/queries'
 import { BalanceSummary } from '@/features/payments/components/balance-summary'
 import { PaymentRow } from '@/features/payments/components/payment-row'
@@ -75,15 +76,27 @@ export default async function ParentDetailPage({
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-xl">{parent.fullName}</CardTitle>
-          <CardDescription className="flex flex-wrap items-center gap-x-3 gap-y-1">
-            <span className="inline-flex items-center gap-1">
-              <Phone className="size-3" />
-              {parent.phone}
-            </span>
-            {parent.email && <span>{parent.email}</span>}
-            <span>на платформе с {BIRTH_FMT.format(parent.createdAt)}</span>
-          </CardDescription>
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div className="space-y-1">
+              <CardTitle className="text-xl">{parent.fullName}</CardTitle>
+              <CardDescription className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                <span className="inline-flex items-center gap-1">
+                  <Phone className="size-3" />
+                  {parent.phone}
+                </span>
+                {parent.email && <span>{parent.email}</span>}
+                <span>на платформе с {BIRTH_FMT.format(parent.createdAt)}</span>
+              </CardDescription>
+            </div>
+            <EditParentForm
+              parent={{
+                id: parent.id,
+                fullName: parent.fullName,
+                phone: parent.phone,
+                email: parent.email,
+              }}
+            />
+          </div>
         </CardHeader>
         <CardContent>
           <BalanceSummary balance={balance} />
