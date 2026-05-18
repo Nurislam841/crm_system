@@ -28,7 +28,13 @@ const DATE_FMT = new Intl.DateTimeFormat('ru-RU', {
   timeZone: 'Asia/Almaty',
 })
 
-export function PlanSummary({ plan }: { plan: PlanWithPayments }) {
+export function PlanSummary({
+  plan,
+  isAdmin = false,
+}: {
+  plan: PlanWithPayments
+  isAdmin?: boolean
+}) {
   const [isPending, startTransition] = useTransition()
 
   function cancel() {
@@ -62,16 +68,18 @@ export function PlanSummary({ plan }: { plan: PlanWithPayments }) {
             )}
           </span>
         </div>
-        <Button
-          type="button"
-          size="xs"
-          variant="ghost"
-          onClick={cancel}
-          disabled={isPending}
-          title="Отменить план"
-        >
-          <Trash2 />
-        </Button>
+        {isAdmin && (
+          <Button
+            type="button"
+            size="xs"
+            variant="ghost"
+            onClick={cancel}
+            disabled={isPending}
+            title="Отменить план"
+          >
+            <Trash2 />
+          </Button>
+        )}
       </div>
       <div className="flex flex-wrap gap-1">
         {plan.payments.map((p, idx) => (

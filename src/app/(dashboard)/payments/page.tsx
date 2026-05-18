@@ -22,7 +22,8 @@ export default async function PaymentsPage({
 }: {
   searchParams: Promise<{ filter?: string }>
 }) {
-  await requireUser()
+  const user = await requireUser()
+  const isAdmin = user.role === 'ADMIN'
   const sp = await searchParams
   const filter = (
     sp.filter && (VALID_FILTERS as string[]).includes(sp.filter)
@@ -83,7 +84,13 @@ export default async function PaymentsPage({
           ) : (
             <ul className="space-y-2">
               {payments.map((p) => (
-                <PaymentRow key={p.id} payment={p} showParent showStudent />
+                <PaymentRow
+                  key={p.id}
+                  payment={p}
+                  showParent
+                  showStudent
+                  isAdmin={isAdmin}
+                />
               ))}
             </ul>
           )}

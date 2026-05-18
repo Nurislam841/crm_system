@@ -88,5 +88,13 @@ export const updatePaymentSchema = z.object({
   notes: z.preprocess(optionalString, z.string().trim().max(2000).optional()),
 })
 
+export const refundPaymentSchema = z.object({
+  paymentId: z.string().trim().min(1),
+  refundedAmount: moneyValue,
+  refundedAt: requiredDate,
+  refundReason: z.preprocess(optionalString, z.string().trim().max(500).optional()),
+})
+
 export type RecordPaymentInput = z.infer<typeof recordPaymentSchema>
 export type SchedulePaymentInput = z.infer<typeof schedulePaymentSchema>
+export type RefundPaymentInput = z.infer<typeof refundPaymentSchema>

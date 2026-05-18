@@ -44,7 +44,8 @@ export default async function ParentDetailPage({
 }: {
   params: Promise<{ id: string }>
 }) {
-  await requireUser()
+  const user = await requireUser()
+  const isAdmin = user.role === 'ADMIN'
   const { id } = await params
   const [parent, courses, payments, balance] = await Promise.all([
     getParent(id),
@@ -186,7 +187,7 @@ export default async function ParentDetailPage({
                               <ul className="space-y-2">
                                 {e.plans.map((p) => (
                                   <li key={p.id}>
-                                    <PlanSummary plan={p} />
+                                    <PlanSummary plan={p} isAdmin={isAdmin} />
                                   </li>
                                 ))}
                               </ul>
@@ -257,7 +258,7 @@ export default async function ParentDetailPage({
           ) : (
             <ul className="space-y-2">
               {payments.map((p) => (
-                <PaymentRow key={p.id} payment={p} showStudent />
+                <PaymentRow key={p.id} payment={p} showStudent isAdmin={isAdmin} />
               ))}
             </ul>
           )}

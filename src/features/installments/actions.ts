@@ -122,6 +122,9 @@ export async function createPlanAction(
 export async function cancelPlanAction(planId: string) {
   try {
     const user = await requireUser()
+    if (user.role !== 'ADMIN') {
+      return { ok: false as const, message: 'Отменить план может только администратор' }
+    }
     const plan = await db.installmentPlan.findFirst({
       where: { id: planId, tenantId: user.tenantId },
       include: { enrollment: { include: { student: { select: { parentId: true } } } } },

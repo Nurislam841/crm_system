@@ -10,6 +10,7 @@ import { notifyManagers } from '@/features/notifications/lib/notify'
 import {
   markPaidSchema,
   recordPaymentSchema,
+  refundPaymentSchema,
   schedulePaymentSchema,
   updatePaymentSchema,
 } from './schemas'
@@ -205,14 +206,35 @@ export async function markPaidAction(input: {
 
 export async function deletePaymentAction(paymentId: string) {
   const user = await requireUser()
+  if (user.role !== 'ADMIN') {
+    return { ok: false as const, message: 'Удалять платежи может только администратор' }
+  }
   const payment = await db.payment.findFirst({
     where: { id: paymentId, tenantId: user.tenantId },
-    select: { parentId: true },
+    select: {
+      id: true,
+      parentId: true,
+      amount: true,
+      parent: { select: { fullName: true } },
+    },
   })
-  if (!payment) return
+  if (!payment) return { ok: false as const, message: 'Платёж не найден' }
   await db.payment.delete({ where: { id: paymentId } })
+
+  await notifyManagers({
+    tenantId: user.tenantId,
+    type: 'PAYMENT_DELETED',
+    title: `Удалён платёж: ${payment.parent.fullName} · ${formatKzt(payment.amount)}`,
+    body: `Удалил(а): ${user.email}`,
+    link: `/parents/${payment.parentId}`,
+    triggerType: 'PaymentDeletion',
+    triggerId: `${payment.id}:${Date.now()}`,
+    excludeUserId: user.id,
+  })
+
   revalidatePath(`/parents/${payment.parentId}`)
   revalidatePath('/payments')
+  return { ok: true as const }
 }
 
 export async function updatePaymentAction(
@@ -221,6 +243,9 @@ export async function updatePaymentAction(
   form: FormData,
 ): Promise<PaymentFormState> {
   const user = await requireUser()
+  if (user.role !== 'ADMIN') {
+    return { ok: false, message: 'Редактировать платежи может только администратор' }
+  }
   const parsed = updatePaymentSchema.safeParse({
     paymentId,
     amount: form.get('amount'),
@@ -235,14 +260,22 @@ export async function updatePaymentAction(
   }
   const payment = await db.payment.findFirst({
     where: { id: paymentId, tenantId: user.tenantId },
-    select: { id: true, parentId: true },
+    select: {
+      id: true,
+      parentId: true,
+      amount: true,
+      parent: { select: { fullName: true } },
+    },
   })
   if (!payment) return { ok: false, message: 'Платёж не найден' }
+
+  const prevAmount = Number(payment.amount.toString())
+  const newAmount = parsed.data.amount
 
   await db.payment.update({
     where: { id: paymentId },
     data: {
-      amount: parsed.data.amount.toFixed(2),
+      amount: newAmount.toFixed(2),
       dueAt: parsed.data.dueAt,
       paidAt: parsed.data.paidAt ?? null,
       method: parsed.data.method ?? null,
@@ -251,7 +284,97 @@ export async function updatePaymentAction(
     },
   })
 
+  if (prevAmount !== newAmount) {
+    await notifyManagers({
+      tenantId: user.tenantId,
+      type: 'PAYMENT_EDITED',
+      title: `Сумма изменена: ${payment.parent.fullName}`,
+      body: `Было ${formatKzt(prevAmount)} → стало ${formatKzt(newAmount)}. ${user.email}`,
+      link: `/parents/${payment.parentId}`,
+      triggerType: 'PaymentEdit',
+      triggerId: `${payment.id}:${Date.now()}`,
+      excludeUserId: user.id,
+    })
+  }
+
   revalidatePath(`/parents/${payment.parentId}`)
   revalidatePath('/payments')
   return { ok: true }
+}
+
+export async function refundPaymentAction(
+  paymentId: string,
+  _prev: PaymentFormState,
+  form: FormData,
+): Promise<PaymentFormState> {
+  try {
+    const user = await requireUser()
+    if (user.role !== 'ADMIN') {
+      return { ok: false, message: 'Возврат может оформить только администратор' }
+    }
+    const parsed = refundPaymentSchema.safeParse({
+      paymentId,
+      refundedAmount: form.get('refundedAmount'),
+      refundedAt: form.get('refundedAt'),
+      refundReason: form.get('refundReason'),
+    })
+    if (!parsed.success) {
+      return { ok: false, fieldErrors: flatten(parsed.error) }
+    }
+
+    const payment = await db.payment.findFirst({
+      where: { id: paymentId, tenantId: user.tenantId },
+      select: {
+        id: true,
+        parentId: true,
+        amount: true,
+        paidAt: true,
+        refundedAt: true,
+        parent: { select: { fullName: true } },
+      },
+    })
+    if (!payment) return { ok: false, message: 'Платёж не найден' }
+    if (!payment.paidAt) {
+      return { ok: false, message: 'Возврат возможен только для оплаченного платежа' }
+    }
+    if (payment.refundedAt) {
+      return { ok: false, message: 'Этот платёж уже возвращён' }
+    }
+    const max = Number(payment.amount.toString())
+    if (parsed.data.refundedAmount > max) {
+      return {
+        ok: false,
+        fieldErrors: { refundedAmount: `Не больше ${max}` },
+      }
+    }
+
+    await db.payment.update({
+      where: { id: paymentId },
+      data: {
+        refundedAt: parsed.data.refundedAt,
+        refundedAmount: parsed.data.refundedAmount.toFixed(2),
+        refundReason: parsed.data.refundReason ?? null,
+      },
+    })
+
+    await notifyManagers({
+      tenantId: user.tenantId,
+      type: 'PAYMENT_REFUNDED',
+      title: `Возврат: ${payment.parent.fullName} · ${formatKzt(parsed.data.refundedAmount)}`,
+      body: parsed.data.refundReason ?? `Оформил(а): ${user.email}`,
+      link: `/parents/${payment.parentId}`,
+      triggerType: 'PaymentRefund',
+      triggerId: payment.id,
+      excludeUserId: user.id,
+    })
+
+    revalidatePath(`/parents/${payment.parentId}`)
+    revalidatePath('/payments')
+    revalidatePath('/dashboard')
+    return { ok: true }
+  } catch (e) {
+    console.error('[refundPaymentAction]', e)
+    const msg = e instanceof Error ? e.message : 'Не удалось оформить возврат'
+    return { ok: false, message: msg }
+  }
 }

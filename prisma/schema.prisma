@@ -179,19 +179,22 @@ model Enrollment {
 }
 
 model Payment {
-  id           String         @id @default(cuid())
-  tenantId     String
-  parentId     String
-  enrollmentId String?
-  planId       String?
-  amount       Decimal        @db.Decimal(12, 2)
-  currency     String         @default("KZT")
-  dueAt        DateTime
-  paidAt       DateTime?
-  method       PaymentMethod?
-  reference    String?
-  notes        String?
-  createdAt    DateTime       @default(now())
+  id             String         @id @default(cuid())
+  tenantId       String
+  parentId       String
+  enrollmentId   String?
+  planId         String?
+  amount         Decimal        @db.Decimal(12, 2)
+  currency       String         @default("KZT")
+  dueAt          DateTime
+  paidAt         DateTime?
+  method         PaymentMethod?
+  reference      String?
+  notes          String?
+  refundedAt     DateTime?
+  refundedAmount Decimal?       @db.Decimal(12, 2)
+  refundReason   String?
+  createdAt      DateTime       @default(now())
 
   parent     Parent           @relation(fields: [parentId], references: [id])
   enrollment Enrollment?      @relation(fields: [enrollmentId], references: [id])
@@ -200,6 +203,7 @@ model Payment {
   @@index([tenantId, dueAt])
   @@index([tenantId, parentId, dueAt])
   @@index([tenantId, enrollmentId])
+  @@index([tenantId, refundedAt])
 }
 
 enum PaymentMethod {

@@ -38,22 +38,38 @@ export type ParentBalance = {
   scheduledTotal: number
   overdueTotal: number
   overdueCount: number
+  refundedTotal: number
+  refundedCount: number
 }
 
 export async function getParentBalance(parentId: string): Promise<ParentBalance> {
   return withTenant(async (tenantId) => {
     const rows = await db.payment.findMany({
       where: { tenantId, parentId },
-      select: { amount: true, paidAt: true, dueAt: true },
+      select: {
+        amount: true,
+        paidAt: true,
+        dueAt: true,
+        refundedAt: true,
+        refundedAmount: true,
+      },
     })
     const now = Date.now()
     let paid = 0,
       scheduled = 0,
       overdue = 0,
-      overdueCount = 0
+      overdueCount = 0,
+      refunded = 0,
+      refundedCount = 0
     for (const r of rows) {
       const n = Number(r.amount.toString())
-      if (r.paidAt) {
+      const refundN = r.refundedAmount ? Number(r.refundedAmount.toString()) : 0
+      if (r.refundedAt) {
+        // paid - refundedAmount counts as net paid; refunded part tracked separately
+        paid += n - refundN
+        refunded += refundN
+        refundedCount += 1
+      } else if (r.paidAt) {
         paid += n
       } else {
         scheduled += n
@@ -68,6 +84,8 @@ export async function getParentBalance(parentId: string): Promise<ParentBalance>
       scheduledTotal: scheduled,
       overdueTotal: overdue,
       overdueCount,
+      refundedTotal: refunded,
+      refundedCount,
     }
   })
 }
