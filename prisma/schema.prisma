@@ -69,6 +69,7 @@ model Lead {
 
   assignee   User?          @relation("LeadAssignee", fields: [assignedTo], references: [id])
   activities LeadActivity[]
+  trials     TrialLesson[]
 
   @@index([tenantId, stage])
   @@index([tenantId, parentPhone])
@@ -108,4 +109,36 @@ enum AcquisitionSource {
   WALK_IN
   TELEGRAM
   OTHER
+}
+
+model Parent {
+  id                String            @id @default(cuid())
+  tenantId          String
+  fullName          String
+  phone             String
+  email             String?
+  telegramChatId    String?
+  acquisitionSource AcquisitionSource
+  createdAt         DateTime          @default(now())
+  deletedAt         DateTime?
+
+  @@unique([tenantId, phone])
+  @@index([tenantId])
+  @@index([tenantId, telegramChatId])
+}
+
+model TrialLesson {
+  id          String   @id @default(cuid())
+  tenantId    String
+  leadId      String
+  scheduledAt DateTime
+  status      String   @default("BOOKED")
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, scheduledAt])
+  @@index([tenantId, leadId])
 }

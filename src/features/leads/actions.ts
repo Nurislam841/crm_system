@@ -7,6 +7,7 @@ import { requireUser } from '@/lib/auth/server'
 import { db } from '@/lib/db/prisma'
 
 import { logActivity } from './lib/activity'
+import { ensureParentForLead } from './lib/convert'
 import { findExistingByPhone } from './lib/dedup'
 import { makeIntakeSecret } from './lib/intake'
 import {
@@ -178,6 +179,13 @@ export async function updateLeadAction(
       type: 'stage_changed',
       payload: { from: existing.stage, to: parsed.data.stage },
     })
+    if (parsed.data.stage === 'WON') {
+      await ensureParentForLead({
+        tenantId: user.tenantId,
+        leadId: id,
+        actorUserId: user.id,
+      })
+    }
   }
   if ((existing.assignedTo ?? null) !== (parsed.data.assignedTo ?? null)) {
     await logActivity({
@@ -280,6 +288,13 @@ export async function moveLeadStageAction(input: { leadId: string; stage: string
     type: 'stage_changed',
     payload: { from: existing.stage, to: parsed.data.stage },
   })
+  if (parsed.data.stage === 'WON') {
+    await ensureParentForLead({
+      tenantId: user.tenantId,
+      leadId: parsed.data.leadId,
+      actorUserId: user.id,
+    })
+  }
   revalidatePath('/leads')
   revalidatePath(`/leads/${parsed.data.leadId}`)
   return { ok: true as const }

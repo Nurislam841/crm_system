@@ -9,6 +9,9 @@ export type ActivityType =
   | 'next_contact_set'
   | 'note'
   | 'call'
+  | 'trial_booked'
+  | 'trial_status_changed'
+  | 'converted_to_parent'
 
 export type ActivityPayload = Prisma.JsonObject
 
@@ -37,4 +40,7 @@ export const ACTIVITY_LABEL_RU: Record<ActivityType, string> = {
   next_contact_set: 'Запланирован контакт',
   note: 'Заметка',
   call: 'Звонок',
+  trial_booked: 'Записан пробный',
+  trial_status_changed: 'Статус пробного',
+  converted_to_parent: 'Конверсия в клиента',
 }

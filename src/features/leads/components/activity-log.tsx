@@ -1,6 +1,9 @@
 import {
+  CalendarPlus,
+  CheckCircle2,
   CircleArrowRight,
   CalendarClock,
+  CalendarCheck,
   MessageSquare,
   Phone,
   Sparkles,
@@ -29,6 +32,9 @@ const ICONS: Record<ActivityType, LucideIcon> = {
   next_contact_set: CalendarClock,
   note: MessageSquare,
   call: Phone,
+  trial_booked: CalendarPlus,
+  trial_status_changed: CalendarCheck,
+  converted_to_parent: CheckCircle2,
 }
 
 export function ActivityLog({ activities }: { activities: ActivityWithAuthor[] }) {
@@ -107,6 +113,29 @@ function ActivityBody({
       <p className="text-xs text-muted-foreground">{formatDate(new Date(at))}</p>
     ) : (
       <p className="text-xs text-muted-foreground">Напоминание снято</p>
+    )
+  }
+  if (type === 'trial_booked') {
+    const at = typeof payload.scheduledAt === 'string' ? payload.scheduledAt : null
+    return at ? (
+      <p className="text-xs text-muted-foreground">на {formatDate(new Date(at))}</p>
+    ) : null
+  }
+  if (type === 'trial_status_changed') {
+    const from = typeof payload.from === 'string' ? payload.from : ''
+    const to = typeof payload.to === 'string' ? payload.to : ''
+    return (
+      <p className="text-xs text-muted-foreground">
+        {from} → {to}
+      </p>
+    )
+  }
+  if (type === 'converted_to_parent') {
+    const reused = payload.reused === true
+    return (
+      <p className="text-xs text-muted-foreground">
+        {reused ? 'Связан с существующим клиентом' : 'Создана запись Parent'}
+      </p>
     )
   }
   return null

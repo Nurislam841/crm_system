@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ArrowLeft, CalendarClock, Trash2 } from 'lucide-react'
+import { ArrowLeft, CalendarClock, CheckCircle2, Trash2 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -17,7 +17,14 @@ import { AddActivityForm } from '@/features/leads/components/add-activity-form'
 import { LeadForm } from '@/features/leads/components/lead-form'
 import { StageBadge } from '@/features/leads/components/stage-badge'
 import { SOURCE_LABEL_RU } from '@/features/leads/lib/sources'
-import { getLead, listAssignableUsers } from '@/features/leads/queries'
+import {
+  getConvertedParent,
+  getLead,
+  listAssignableUsers,
+} from '@/features/leads/queries'
+import { BookTrialForm } from '@/features/trials/components/book-trial-form'
+import { TrialList } from '@/features/trials/components/trial-list'
+import { listTrialsForLead } from '@/features/trials/queries'
 import { cn } from '@/lib/utils'
 
 const DATE_FMT = new Intl.DateTimeFormat('ru-RU', {
@@ -35,6 +42,11 @@ export default async function LeadDetailPage({
   const { id } = await params
   const [lead, users] = await Promise.all([getLead(id), listAssignableUsers()])
   if (!lead) notFound()
+
+  const trials = await listTrialsForLead(lead.id)
+  const convertedParent = lead.convertedParentId
+    ? await getConvertedParent(lead.convertedParentId)
+    : null
 
   const deleteAction = async () => {
     'use server'
@@ -56,6 +68,20 @@ export default async function LeadDetailPage({
         <ArrowLeft className="size-4" />
         Назад к воронке
       </Link>
+
+      {lead.stage === 'WON' && convertedParent && (
+        <div className="flex items-start gap-2 rounded-lg border border-emerald-300/40 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 dark:border-emerald-500/30 dark:bg-emerald-950/30 dark:text-emerald-100">
+          <CheckCircle2 className="mt-0.5 size-4 shrink-0" />
+          <div>
+            <strong className="font-medium">Конверсия в клиента.</strong>{' '}
+            Лид стал родителем в системе: {convertedParent.fullName} ({convertedParent.phone}).
+            <br />
+            <span className="text-xs opacity-80">
+              Phase 2 раскроет страницу клиента — пока он живёт в БД как Parent.
+            </span>
+          </div>
+        </div>
+      )}
 
       <Card>
         <CardHeader>
@@ -119,6 +145,20 @@ export default async function LeadDetailPage({
               Soft-delete — данные остаются в базе для аудита, но скрываются из списка.
             </p>
           </form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Пробный урок</CardTitle>
+          <CardDescription>
+            Запишите ребёнка на пробное занятие. После проведения отметьте статус — этап лида подстроится автоматически.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <BookTrialForm leadId={lead.id} />
+          <Separator />
+          <TrialList trials={trials} />
         </CardContent>
       </Card>
 

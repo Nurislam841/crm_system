@@ -85,3 +85,12 @@ export async function getIntakeSettings() {
     }),
   )
 }
+
+export async function getConvertedParent(parentId: string) {
+  return withTenant((tenantId) =>
+    db.parent.findFirst({
+      where: { id: parentId, tenantId, deletedAt: null },
+      select: { id: true, fullName: true, phone: true },
+    }),
+  )
+}
