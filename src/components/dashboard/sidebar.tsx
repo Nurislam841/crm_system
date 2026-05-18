@@ -28,7 +28,7 @@ const mainItems: NavItem[] = [
   { label: 'Лиды', href: '/leads', icon: Users },
   { label: 'Семьи', href: '/parents', icon: GraduationCap },
   { label: 'Курсы', href: '/courses', icon: BookOpen },
-  { label: 'Платежи', href: '/payments', icon: Wallet, phase: 2 },
+  { label: 'Платежи', href: '/payments', icon: Wallet },
   { label: 'Расписание', href: '/schedule', icon: CalendarDays, phase: 4 },
 ]
 
