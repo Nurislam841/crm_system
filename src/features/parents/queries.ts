@@ -12,7 +12,16 @@ export type ParentDetail = Prisma.ParentGetPayload<{
     students: {
       include: {
         enrollments: {
-          include: { course: { select: { id: true; name: true } } }
+          include: {
+            course: { select: { id: true; name: true; monthlyPrice: true } }
+            plans: {
+              include: {
+                payments: {
+                  select: { id: true; amount: true; dueAt: true; paidAt: true }
+                }
+              }
+            }
+          }
         }
       }
     }
@@ -40,7 +49,18 @@ export async function getParent(id: string) {
           include: {
             enrollments: {
               where: { endedAt: null },
-              include: { course: { select: { id: true, name: true } } },
+              include: {
+                course: { select: { id: true, name: true, monthlyPrice: true } },
+                plans: {
+                  orderBy: { createdAt: 'desc' },
+                  include: {
+                    payments: {
+                      select: { id: true, amount: true, dueAt: true, paidAt: true },
+                      orderBy: { dueAt: 'asc' },
+                    },
+                  },
+                },
+              },
             },
           },
         },

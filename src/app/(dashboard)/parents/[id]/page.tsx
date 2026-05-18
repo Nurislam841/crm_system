@@ -21,6 +21,8 @@ import { Separator } from '@/components/ui/separator'
 import { listCourses } from '@/features/courses/queries'
 import { endEnrollmentAction } from '@/features/enrollments/actions'
 import { AddEnrollmentForm } from '@/features/enrollments/components/add-enrollment-form'
+import { CreatePlanForm } from '@/features/installments/components/create-plan-form'
+import { PlanSummary } from '@/features/installments/components/plan-summary'
 import { getParent } from '@/features/parents/queries'
 import { BalanceSummary } from '@/features/payments/components/balance-summary'
 import { PaymentRow } from '@/features/payments/components/payment-row'
@@ -136,31 +138,52 @@ export default async function ParentDetailPage({
                     </div>
                   </div>
                   {s.enrollments.length > 0 ? (
-                    <ul className="space-y-1">
+                    <ul className="space-y-2">
                       {s.enrollments.map((e) => {
                         const endAction = async () => {
                           'use server'
                           await endEnrollmentAction(e.id)
                         }
+                        const enrollmentLabel = `${s.fullName} · ${e.course.name}`
+                        const monthlyDefault = Number(
+                          e.course.monthlyPrice.toString(),
+                        )
                         return (
                           <li
                             key={e.id}
-                            className="flex items-center justify-between gap-2 rounded-md bg-muted/50 px-2 py-1.5 text-xs"
+                            className="space-y-2 rounded-md border border-border/60 bg-muted/30 p-2"
                           >
-                            <span className="flex items-center gap-1.5">
-                              <BookOpen className="size-3" />
-                              {e.course.name}
-                            </span>
-                            <form action={endAction}>
-                              <Button
-                                type="submit"
-                                size="xs"
-                                variant="ghost"
-                                title="Завершить зачисление"
-                              >
-                                <X />
-                              </Button>
-                            </form>
+                            <div className="flex items-center justify-between gap-2 text-xs">
+                              <span className="flex items-center gap-1.5">
+                                <BookOpen className="size-3" />
+                                <strong className="font-medium">{e.course.name}</strong>
+                              </span>
+                              <form action={endAction}>
+                                <Button
+                                  type="submit"
+                                  size="xs"
+                                  variant="ghost"
+                                  title="Завершить зачисление"
+                                >
+                                  <X />
+                                </Button>
+                              </form>
+                            </div>
+                            {e.plans.length > 0 ? (
+                              <ul className="space-y-2">
+                                {e.plans.map((p) => (
+                                  <li key={p.id}>
+                                    <PlanSummary plan={p} />
+                                  </li>
+                                ))}
+                              </ul>
+                            ) : (
+                              <CreatePlanForm
+                                enrollmentId={e.id}
+                                enrollmentLabel={enrollmentLabel}
+                                suggestedMonthly={monthlyDefault}
+                              />
+                            )}
                           </li>
                         )
                       })}
