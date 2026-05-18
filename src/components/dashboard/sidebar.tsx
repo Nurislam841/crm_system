@@ -24,7 +24,7 @@ type NavItem = {
 
 const mainItems: NavItem[] = [
   { label: 'Дашборд', href: '/dashboard', icon: LayoutDashboard },
-  { label: 'Лиды', href: '/leads', icon: Users, phase: 1 },
+  { label: 'Лиды', href: '/leads', icon: Users },
   { label: 'Платежи', href: '/payments', icon: Wallet, phase: 2 },
   { label: 'Ученики', href: '/students', icon: GraduationCap, phase: 2 },
   { label: 'Расписание', href: '/schedule', icon: CalendarDays, phase: 4 },
@@ -71,9 +71,10 @@ function NavSection({
         {title}
       </div>
       <ul className="space-y-0.5">
-        {items.map((item) => (
-          <NavLinkItem key={item.href} item={item} active={pathname === item.href} />
-        ))}
+        {items.map((item) => {
+          const active = pathname === item.href || pathname.startsWith(item.href + '/')
+          return <NavLinkItem key={item.href} item={item} active={active} />
+        })}
       </ul>
     </div>
   )

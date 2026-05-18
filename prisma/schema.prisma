@@ -34,7 +34,8 @@ model User {
   createdAt    DateTime  @default(now())
   deletedAt    DateTime?
 
-  tenant       Tenant    @relation(fields: [tenantId], references: [id])
+  tenant         Tenant @relation(fields: [tenantId], references: [id])
+  assignedLeads  Lead[] @relation("LeadAssignee")
 
   @@unique([tenantId, email])
   @@index([tenantId])
@@ -44,4 +45,47 @@ enum UserRole {
   ADMIN
   MANAGER
   TEACHER
+}
+
+model Lead {
+  id                String            @id @default(cuid())
+  tenantId          String
+  parentName        String
+  parentPhone       String
+  parentEmail       String?
+  childName         String?
+  childAge          Int?
+  acquisitionSource AcquisitionSource
+  stage             LeadStage         @default(NEW)
+  assignedTo        String?
+  notes             String?
+  convertedParentId String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  deletedAt         DateTime?
+
+  assignee User? @relation("LeadAssignee", fields: [assignedTo], references: [id])
+
+  @@index([tenantId, stage])
+  @@index([tenantId, parentPhone])
+  @@index([tenantId, assignedTo])
+}
+
+enum LeadStage {
+  NEW
+  CONTACTED
+  TRIAL_BOOKED
+  TRIAL_DONE
+  NEGOTIATION
+  WON
+  LOST
+}
+
+enum AcquisitionSource {
+  INSTAGRAM
+  WEBSITE
+  REFERRAL
+  WALK_IN
+  TELEGRAM
+  OTHER
 }
