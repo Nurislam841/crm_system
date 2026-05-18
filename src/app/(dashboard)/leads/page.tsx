@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Plus } from 'lucide-react'
+import { Plus, Webhook } from 'lucide-react'
 
 import { buttonVariants } from '@/components/ui/button'
 import { LeadKanban } from '@/features/leads/components/lead-kanban'
@@ -8,6 +8,7 @@ import { StageFilter } from '@/features/leads/components/stage-filter'
 import { ViewToggle } from '@/features/leads/components/view-toggle'
 import { countLeadsByStage, listLeads } from '@/features/leads/queries'
 import { LEAD_STAGE_VALUES } from '@/features/leads/schemas'
+import { requireUser } from '@/lib/auth/server'
 
 type SearchParams = { stage?: string; view?: string }
 
@@ -16,6 +17,7 @@ export default async function LeadsPage({
 }: {
   searchParams: Promise<SearchParams>
 }) {
+  const user = await requireUser()
   const { stage, view } = await searchParams
   const validStage =
     stage && (LEAD_STAGE_VALUES as readonly string[]).includes(stage)
@@ -38,6 +40,15 @@ export default async function LeadsPage({
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {user.role === 'ADMIN' && (
+            <Link
+              href="/leads/intake"
+              className={buttonVariants({ variant: 'outline' })}
+            >
+              <Webhook />
+              Intake
+            </Link>
+          )}
           <ViewToggle value={currentView} />
           <Link href="/leads/new" className={buttonVariants()}>
             <Plus />

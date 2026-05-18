@@ -8,6 +8,7 @@ import { db } from '@/lib/db/prisma'
 
 import { logActivity } from './lib/activity'
 import { findExistingByPhone } from './lib/dedup'
+import { makeIntakeSecret } from './lib/intake'
 import {
   addActivitySchema,
   createLeadSchema,
@@ -282,4 +283,18 @@ export async function moveLeadStageAction(input: { leadId: string; stage: string
   revalidatePath('/leads')
   revalidatePath(`/leads/${parsed.data.leadId}`)
   return { ok: true as const }
+}
+
+export async function regenerateIntakeSecretAction() {
+  const user = await requireUser()
+  if (user.role !== 'ADMIN') {
+    return { ok: false as const, message: 'Только администратор может менять секрет' }
+  }
+  const secret = makeIntakeSecret()
+  await db.tenant.update({
+    where: { id: user.tenantId },
+    data: { intakeSecret: secret },
+  })
+  revalidatePath('/leads/intake')
+  return { ok: true as const, secret }
 }

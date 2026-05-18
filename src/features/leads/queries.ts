@@ -76,3 +76,12 @@ export async function listAssignableUsers() {
     }),
   )
 }
+
+export async function getIntakeSettings() {
+  return withTenant((tenantId) =>
+    db.tenant.findUnique({
+      where: { id: tenantId },
+      select: { slug: true, name: true, intakeSecret: true },
+    }),
+  )
+}

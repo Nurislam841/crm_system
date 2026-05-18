@@ -1,7 +1,13 @@
+import crypto from 'node:crypto'
+
 import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 
 const db = new PrismaClient()
+
+function makeIntakeSecret() {
+  return 'iks_' + crypto.randomBytes(24).toString('base64url')
+}
 
 async function main() {
   const slug = process.env.SEED_TENANT_SLUG ?? 'my_school'
@@ -13,8 +19,15 @@ async function main() {
   const tenant = await db.tenant.upsert({
     where: { slug },
     update: {},
-    create: { slug, name: tenantName },
+    create: { slug, name: tenantName, intakeSecret: makeIntakeSecret() },
   })
+
+  if (!tenant.intakeSecret) {
+    await db.tenant.update({
+      where: { id: tenant.id },
+      data: { intakeSecret: makeIntakeSecret() },
+    })
+  }
 
   const passwordHash = await bcrypt.hash(password, 12)
 

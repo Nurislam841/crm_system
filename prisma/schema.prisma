@@ -14,14 +14,15 @@ datasource db {
 }
 
 model Tenant {
-  id        String   @id @default(cuid())
-  slug      String   @unique
-  name      String
-  timezone  String   @default("Asia/Almaty")
-  currency  String   @default("KZT")
-  createdAt DateTime @default(now())
+  id           String   @id @default(cuid())
+  slug         String   @unique
+  name         String
+  timezone     String   @default("Asia/Almaty")
+  currency     String   @default("KZT")
+  intakeSecret String?  @unique
+  createdAt    DateTime @default(now())
 
-  users     User[]
+  users User[]
 }
 
 model User {
