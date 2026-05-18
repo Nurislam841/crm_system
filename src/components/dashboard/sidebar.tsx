@@ -9,6 +9,7 @@ import {
   Wallet,
   CalendarDays,
   BarChart3,
+  BookOpen,
   Settings,
   type LucideIcon,
 } from 'lucide-react'
@@ -25,8 +26,9 @@ type NavItem = {
 const mainItems: NavItem[] = [
   { label: 'Дашборд', href: '/dashboard', icon: LayoutDashboard },
   { label: 'Лиды', href: '/leads', icon: Users },
+  { label: 'Семьи', href: '/parents', icon: GraduationCap },
+  { label: 'Курсы', href: '/courses', icon: BookOpen },
   { label: 'Платежи', href: '/payments', icon: Wallet, phase: 2 },
-  { label: 'Ученики', href: '/students', icon: GraduationCap, phase: 2 },
   { label: 'Расписание', href: '/schedule', icon: CalendarDays, phase: 4 },
 ]
 
@@ -50,7 +52,7 @@ export function Sidebar() {
         <NavSection title="Система" items={systemItems} pathname={pathname} />
       </nav>
       <div className="border-t border-sidebar-border px-5 py-3 text-xs text-muted-foreground">
-        Phase 0 · v0.1
+        Phase 2 · v0.2
       </div>
     </aside>
   )

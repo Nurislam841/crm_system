@@ -73,12 +73,14 @@ export default async function LeadDetailPage({
         <div className="flex items-start gap-2 rounded-lg border border-emerald-300/40 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 dark:border-emerald-500/30 dark:bg-emerald-950/30 dark:text-emerald-100">
           <CheckCircle2 className="mt-0.5 size-4 shrink-0" />
           <div>
-            <strong className="font-medium">Конверсия в клиента.</strong>{' '}
-            Лид стал родителем в системе: {convertedParent.fullName} ({convertedParent.phone}).
-            <br />
-            <span className="text-xs opacity-80">
-              Phase 2 раскроет страницу клиента — пока он живёт в БД как Parent.
-            </span>
+            <strong className="font-medium">Конверсия в клиента.</strong> Открыть карточку семьи:{' '}
+            <Link
+              href={`/parents/${convertedParent.id}`}
+              className="font-medium underline underline-offset-2"
+            >
+              {convertedParent.fullName}
+            </Link>{' '}
+            ({convertedParent.phone}).
           </div>
         </div>
       )}
