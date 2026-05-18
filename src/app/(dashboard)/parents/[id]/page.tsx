@@ -25,6 +25,7 @@ import { CreatePlanForm } from '@/features/installments/components/create-plan-f
 import { PlanSummary } from '@/features/installments/components/plan-summary'
 import { EditParentForm } from '@/features/parents/components/edit-parent-form'
 import { getParent } from '@/features/parents/queries'
+import { LinkParentButton } from '@/features/telegram-bot/components/link-parent-button'
 import { BalanceSummary } from '@/features/payments/components/balance-summary'
 import { PaymentRow } from '@/features/payments/components/payment-row'
 import { RecordPaymentForm } from '@/features/payments/components/record-payment-form'
@@ -99,8 +100,9 @@ export default async function ParentDetailPage({
             />
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-3">
           <BalanceSummary balance={balance} />
+          <LinkParentButton parentId={parent.id} isLinked={!!parent.telegramChatId} />
         </CardContent>
       </Card>
 

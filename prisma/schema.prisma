@@ -123,12 +123,28 @@ model Parent {
   createdAt         DateTime          @default(now())
   deletedAt         DateTime?
 
-  students Student[]
-  payments Payment[]
+  students      Student[]
+  payments      Payment[]
+  telegramLinks TelegramLink[]
 
   @@unique([tenantId, phone])
   @@index([tenantId])
   @@index([tenantId, telegramChatId])
+}
+
+model TelegramLink {
+  id         String    @id @default(cuid())
+  tenantId   String
+  parentId   String
+  token      String    @unique
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  parent Parent @relation(fields: [parentId], references: [id])
+
+  @@index([tenantId, parentId])
+  @@index([tenantId, expiresAt])
 }
 
 model Student {
