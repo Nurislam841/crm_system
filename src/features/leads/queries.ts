@@ -7,6 +7,15 @@ export type LeadListItem = Prisma.LeadGetPayload<{
   include: { assignee: { select: { id: true; fullName: true } } }
 }>
 
+export type LeadWithActivities = Prisma.LeadGetPayload<{
+  include: {
+    assignee: { select: { id: true; fullName: true } }
+    activities: {
+      include: { author: { select: { id: true; fullName: true } } }
+    }
+  }
+}>
+
 export async function listLeads(opts: { stage?: LeadStage } = {}) {
   return withTenant<LeadListItem[]>((tenantId) =>
     db.lead.findMany({
@@ -22,10 +31,17 @@ export async function listLeads(opts: { stage?: LeadStage } = {}) {
 }
 
 export async function getLead(id: string) {
-  return withTenant<LeadListItem | null>((tenantId) =>
+  return withTenant<LeadWithActivities | null>((tenantId) =>
     db.lead.findFirst({
       where: { id, tenantId, deletedAt: null },
-      include: { assignee: { select: { id: true, fullName: true } } },
+      include: {
+        assignee: { select: { id: true, fullName: true } },
+        activities: {
+          orderBy: { createdAt: 'desc' },
+          take: 100,
+          include: { author: { select: { id: true, fullName: true } } },
+        },
+      },
     }),
   )
 }
@@ -49,4 +65,14 @@ export async function countLeadsByStage() {
     for (const row of rows) result[row.stage] = row._count._all
     return result
   })
+}
+
+export async function listAssignableUsers() {
+  return withTenant((tenantId) =>
+    db.user.findMany({
+      where: { tenantId, deletedAt: null },
+      select: { id: true, fullName: true, email: true, role: true },
+      orderBy: { fullName: 'asc' },
+    }),
+  )
 }

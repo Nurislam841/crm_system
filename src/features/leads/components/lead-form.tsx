@@ -26,17 +26,32 @@ type LeadFormValues = {
   acquisitionSource?: string | null
   notes?: string | null
   stage?: string | null
+  assignedTo?: string | null
+  nextContactAt?: Date | string | null
 }
+
+type AssignableUser = { id: string; fullName: string }
 
 type Props = {
   mode: 'create' | 'edit'
   leadId?: string
   initial?: LeadFormValues
+  users?: AssignableUser[]
 }
 
 const initialState: LeadFormState = null
 
-export function LeadForm({ mode, leadId, initial }: Props) {
+function toDateInput(value: Date | string | null | undefined): string {
+  if (!value) return ''
+  const d = value instanceof Date ? value : new Date(value)
+  if (Number.isNaN(d.getTime())) return ''
+  const yyyy = d.getFullYear()
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  return `${yyyy}-${mm}-${dd}`
+}
+
+export function LeadForm({ mode, leadId, initial, users = [] }: Props) {
   const action =
     mode === 'create'
       ? createLeadAction
@@ -124,19 +139,51 @@ export function LeadForm({ mode, leadId, initial }: Props) {
       </FieldGroup>
 
       {mode === 'edit' && (
-        <Field label="Этап" name="stage" error={errors.stage} required>
-          <NativeSelect
-            id="stage"
-            name="stage"
-            defaultValue={initial?.stage ?? 'NEW'}
-            required
-          >
-            {LEAD_STAGES.map((stage) => (
-              <option key={stage} value={stage}>
-                {STAGE_LABEL_RU[stage]}
-              </option>
-            ))}
-          </NativeSelect>
+        <FieldGroup>
+          <Field label="Этап" name="stage" error={errors.stage} required>
+            <NativeSelect
+              id="stage"
+              name="stage"
+              defaultValue={initial?.stage ?? 'NEW'}
+              required
+            >
+              {LEAD_STAGES.map((stage) => (
+                <option key={stage} value={stage}>
+                  {STAGE_LABEL_RU[stage]}
+                </option>
+              ))}
+            </NativeSelect>
+          </Field>
+          <Field label="Ответственный" name="assignedTo" error={errors.assignedTo}>
+            <NativeSelect
+              id="assignedTo"
+              name="assignedTo"
+              defaultValue={initial?.assignedTo ?? ''}
+            >
+              <option value="">Без назначения</option>
+              {users.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.fullName}
+                </option>
+              ))}
+            </NativeSelect>
+          </Field>
+        </FieldGroup>
+      )}
+
+      {mode === 'edit' && (
+        <Field
+          label="Следующий контакт"
+          name="nextContactAt"
+          error={errors.nextContactAt}
+          hint="Пусто — без напоминания"
+        >
+          <Input
+            id="nextContactAt"
+            name="nextContactAt"
+            type="date"
+            defaultValue={toDateInput(initial?.nextContactAt)}
+          />
         </Field>
       )}
 

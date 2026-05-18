@@ -24,6 +24,16 @@ export const LEAD_STAGE_VALUES = [
 const optionalString = (s: unknown) =>
   typeof s === 'string' && s.trim().length === 0 ? undefined : s
 
+const optionalDate = z.preprocess(
+  (v) => {
+    if (v === undefined || v === null || v === '') return undefined
+    if (v instanceof Date) return v
+    const d = new Date(String(v))
+    return Number.isNaN(d.getTime()) ? v : d
+  },
+  z.date().optional(),
+)
+
 export const createLeadSchema = z.object({
   parentName: z.string().trim().min(2, 'Минимум 2 символа').max(120),
   parentPhone: z
@@ -54,6 +64,20 @@ export type CreateLeadInput = z.infer<typeof createLeadSchema>
 
 export const updateLeadSchema = createLeadSchema.extend({
   stage: z.enum(LEAD_STAGE_VALUES),
+  assignedTo: z.preprocess(optionalString, z.string().trim().min(1).optional()),
+  nextContactAt: optionalDate,
 })
 
 export type UpdateLeadInput = z.infer<typeof updateLeadSchema>
+
+export const addActivitySchema = z.object({
+  type: z.enum(['note', 'call']),
+  body: z.string().trim().min(1, 'Не пусто').max(2000),
+})
+
+export type AddActivityInput = z.infer<typeof addActivitySchema>
+
+export const moveStageSchema = z.object({
+  leadId: z.string().trim().min(1),
+  stage: z.enum(LEAD_STAGE_VALUES),
+})

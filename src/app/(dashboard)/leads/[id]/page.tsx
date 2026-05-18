@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ArrowLeft, Trash2 } from 'lucide-react'
+import { ArrowLeft, CalendarClock, Trash2 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -12,10 +12,20 @@ import {
 } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { deleteLeadAction } from '@/features/leads/actions'
+import { ActivityLog } from '@/features/leads/components/activity-log'
+import { AddActivityForm } from '@/features/leads/components/add-activity-form'
 import { LeadForm } from '@/features/leads/components/lead-form'
 import { StageBadge } from '@/features/leads/components/stage-badge'
 import { SOURCE_LABEL_RU } from '@/features/leads/lib/sources'
-import { getLead } from '@/features/leads/queries'
+import { getLead, listAssignableUsers } from '@/features/leads/queries'
+import { cn } from '@/lib/utils'
+
+const DATE_FMT = new Intl.DateTimeFormat('ru-RU', {
+  day: '2-digit',
+  month: 'long',
+  year: 'numeric',
+  timeZone: 'Asia/Almaty',
+})
 
 export default async function LeadDetailPage({
   params,
@@ -23,7 +33,7 @@ export default async function LeadDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const lead = await getLead(id)
+  const [lead, users] = await Promise.all([getLead(id), listAssignableUsers()])
   if (!lead) notFound()
 
   const deleteAction = async () => {
@@ -31,19 +41,25 @@ export default async function LeadDetailPage({
     await deleteLeadAction(id)
   }
 
+  const overdue =
+    lead.nextContactAt &&
+    new Date(lead.nextContactAt).getTime() < Date.now() &&
+    lead.stage !== 'WON' &&
+    lead.stage !== 'LOST'
+
   return (
-    <div className="mx-auto max-w-2xl space-y-4">
+    <div className="mx-auto max-w-3xl space-y-4">
       <Link
         href="/leads"
         className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="size-4" />
-        Назад к списку
+        Назад к воронке
       </Link>
 
       <Card>
         <CardHeader>
-          <div className="flex items-start justify-between gap-3">
+          <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <CardTitle className="text-xl">{lead.parentName}</CardTitle>
               <CardDescription className="space-x-2">
@@ -60,11 +76,26 @@ export default async function LeadDetailPage({
             </div>
             <StageBadge stage={lead.stage} />
           </div>
+          {lead.nextContactAt && (
+            <div
+              className={cn(
+                'mt-2 inline-flex w-fit items-center gap-1.5 rounded-md px-2 py-1 text-xs',
+                overdue
+                  ? 'bg-destructive/10 text-destructive'
+                  : 'bg-muted text-muted-foreground',
+              )}
+            >
+              <CalendarClock className="size-3.5" />
+              {overdue ? 'Просрочен контакт: ' : 'Следующий контакт: '}
+              {DATE_FMT.format(new Date(lead.nextContactAt))}
+            </div>
+          )}
         </CardHeader>
         <CardContent>
           <LeadForm
             mode="edit"
             leadId={lead.id}
+            users={users}
             initial={{
               parentName: lead.parentName,
               parentPhone: lead.parentPhone,
@@ -74,6 +105,8 @@ export default async function LeadDetailPage({
               acquisitionSource: lead.acquisitionSource,
               notes: lead.notes,
               stage: lead.stage,
+              assignedTo: lead.assignedTo,
+              nextContactAt: lead.nextContactAt,
             }}
           />
           <Separator className="my-6" />
@@ -86,6 +119,20 @@ export default async function LeadDetailPage({
               Soft-delete — данные остаются в базе для аудита, но скрываются из списка.
             </p>
           </form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Журнал</CardTitle>
+          <CardDescription>
+            Заметки, звонки и автоматические события — всё, что происходило с лидом.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <AddActivityForm leadId={lead.id} />
+          <Separator />
+          <ActivityLog activities={lead.activities} />
         </CardContent>
       </Card>
     </div>
