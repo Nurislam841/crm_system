@@ -26,34 +26,40 @@ export async function createStudentAction(
   _prev: StudentFormState,
   form: FormData,
 ): Promise<StudentFormState> {
-  const user = await requireUser()
-  const parsed = createStudentSchema.safeParse({
-    parentId,
-    fullName: form.get('fullName'),
-    birthDate: form.get('birthDate'),
-    notes: form.get('notes'),
-  })
-  if (!parsed.success) {
-    return { ok: false, fieldErrors: flatten(parsed.error) }
-  }
-  const parent = await db.parent.findFirst({
-    where: { id: parentId, tenantId: user.tenantId, deletedAt: null },
-    select: { id: true },
-  })
-  if (!parent) return { ok: false, message: 'Семья не найдена' }
-
-  await db.student.create({
-    data: {
-      tenantId: user.tenantId,
+  try {
+    const user = await requireUser()
+    const parsed = createStudentSchema.safeParse({
       parentId,
-      fullName: parsed.data.fullName,
-      birthDate: parsed.data.birthDate ?? null,
-      notes: parsed.data.notes ?? null,
-    },
-  })
-  revalidatePath(`/parents/${parentId}`)
-  revalidatePath('/parents')
-  return { ok: true }
+      fullName: form.get('fullName'),
+      birthDate: form.get('birthDate'),
+      notes: form.get('notes'),
+    })
+    if (!parsed.success) {
+      return { ok: false, fieldErrors: flatten(parsed.error) }
+    }
+    const parent = await db.parent.findFirst({
+      where: { id: parentId, tenantId: user.tenantId, deletedAt: null },
+      select: { id: true },
+    })
+    if (!parent) return { ok: false, message: 'Семья не найдена' }
+
+    await db.student.create({
+      data: {
+        tenantId: user.tenantId,
+        parentId,
+        fullName: parsed.data.fullName,
+        birthDate: parsed.data.birthDate ?? null,
+        notes: parsed.data.notes ?? null,
+      },
+    })
+    revalidatePath(`/parents/${parentId}`)
+    revalidatePath('/parents')
+    return { ok: true }
+  } catch (e) {
+    console.error('[createStudentAction]', e)
+    const msg = e instanceof Error ? e.message : 'Не удалось добавить ученика'
+    return { ok: false, message: msg }
+  }
 }
 
 export async function updateStudentAction(

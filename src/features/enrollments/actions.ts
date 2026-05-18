@@ -26,52 +26,58 @@ export async function createEnrollmentAction(
   _prev: EnrollmentFormState,
   form: FormData,
 ): Promise<EnrollmentFormState> {
-  const user = await requireUser()
-  const parsed = createEnrollmentSchema.safeParse({
-    studentId,
-    courseId: form.get('courseId'),
-  })
-  if (!parsed.success) {
-    return { ok: false, fieldErrors: flatten(parsed.error) }
-  }
-
-  const student = await db.student.findFirst({
-    where: { id: studentId, tenantId: user.tenantId, deletedAt: null },
-    select: { id: true, parentId: true },
-  })
-  if (!student) return { ok: false, message: 'Ученик не найден' }
-
-  const course = await db.course.findFirst({
-    where: { id: parsed.data.courseId, tenantId: user.tenantId, archivedAt: null },
-    select: { id: true },
-  })
-  if (!course) {
-    return { ok: false, fieldErrors: { courseId: 'Курс не найден или в архиве' } }
-  }
-
-  const existing = await db.enrollment.findFirst({
-    where: {
-      tenantId: user.tenantId,
+  try {
+    const user = await requireUser()
+    const parsed = createEnrollmentSchema.safeParse({
       studentId,
-      courseId: parsed.data.courseId,
-      endedAt: null,
-    },
-    select: { id: true },
-  })
-  if (existing) {
-    return { ok: false, message: 'Ученик уже записан на этот курс' }
+      courseId: form.get('courseId'),
+    })
+    if (!parsed.success) {
+      return { ok: false, fieldErrors: flatten(parsed.error) }
+    }
+
+    const student = await db.student.findFirst({
+      where: { id: studentId, tenantId: user.tenantId, deletedAt: null },
+      select: { id: true, parentId: true },
+    })
+    if (!student) return { ok: false, message: 'Ученик не найден' }
+
+    const course = await db.course.findFirst({
+      where: { id: parsed.data.courseId, tenantId: user.tenantId, archivedAt: null },
+      select: { id: true },
+    })
+    if (!course) {
+      return { ok: false, fieldErrors: { courseId: 'Курс не найден или в архиве' } }
+    }
+
+    const existing = await db.enrollment.findFirst({
+      where: {
+        tenantId: user.tenantId,
+        studentId,
+        courseId: parsed.data.courseId,
+        endedAt: null,
+      },
+      select: { id: true },
+    })
+    if (existing) {
+      return { ok: false, message: 'Ученик уже записан на этот курс' }
+    }
+
+    await db.enrollment.create({
+      data: {
+        tenantId: user.tenantId,
+        studentId,
+        courseId: parsed.data.courseId,
+      },
+    })
+
+    revalidatePath(`/parents/${student.parentId}`)
+    return { ok: true }
+  } catch (e) {
+    console.error('[createEnrollmentAction]', e)
+    const msg = e instanceof Error ? e.message : 'Не удалось записать на курс'
+    return { ok: false, message: msg }
   }
-
-  await db.enrollment.create({
-    data: {
-      tenantId: user.tenantId,
-      studentId,
-      courseId: parsed.data.courseId,
-    },
-  })
-
-  revalidatePath(`/parents/${student.parentId}`)
-  return { ok: true }
 }
 
 export async function endEnrollmentAction(enrollmentId: string) {
