@@ -17,6 +17,7 @@ export async function getCourse(id: string) {
   return withTenant((tenantId) =>
     db.course.findFirst({
       where: { id, tenantId },
+      include: { _count: { select: { enrollments: true } } },
     }),
   )
 }

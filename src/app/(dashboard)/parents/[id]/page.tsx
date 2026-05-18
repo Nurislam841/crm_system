@@ -1,6 +1,13 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ArrowLeft, BookOpen, CalendarDays, Phone, X } from 'lucide-react'
+import {
+  ArrowLeft,
+  BookOpen,
+  CalendarDays,
+  GraduationCap,
+  Phone,
+  X,
+} from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -51,6 +58,9 @@ export default async function ParentDetailPage({
     })),
   )
 
+  const hasStudents = parent.students.length > 0
+  const hasAnyEnrollment = parent.students.some((s) => s.enrollments.length > 0)
+
   return (
     <div className="mx-auto max-w-3xl space-y-4">
       <Link
@@ -78,21 +88,36 @@ export default async function ParentDetailPage({
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Дети и зачисления</CardTitle>
-          <CardDescription>
-            Запишите ребёнка на курс — потом сможете фиксировать платежи с привязкой.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-5">
-          <AddStudentForm parentId={parent.id} />
-          <Separator />
-          {parent.students.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              Пока ни одного ребёнка не добавлено.
-            </p>
-          ) : (
+      {/* STEP 1: explicit empty state when no students */}
+      {!hasStudents ? (
+        <Card className="border-amber-300/40 bg-amber-50 dark:border-amber-500/30 dark:bg-amber-950/30">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <GraduationCap className="size-4" />
+              Шаг 1: добавьте ребёнка
+            </CardTitle>
+            <CardDescription>
+              Сначала добавьте ученика в семью — после этого можно будет записать
+              его на курс и фиксировать оплаты.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <AddStudentForm parentId={parent.id} autoFocus />
+          </CardContent>
+        </Card>
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle>Дети и зачисления</CardTitle>
+            <CardDescription>
+              {hasAnyEnrollment
+                ? 'Запишите ещё одного ребёнка или добавьте курсы существующим.'
+                : 'Запишите ученика на курс — потом сможете фиксировать платежи с привязкой.'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            <AddStudentForm parentId={parent.id} />
+            <Separator />
             <ul className="space-y-3">
               {parent.students.map((s) => (
                 <li
@@ -110,7 +135,7 @@ export default async function ParentDetailPage({
                       )}
                     </div>
                   </div>
-                  {s.enrollments.length > 0 && (
+                  {s.enrollments.length > 0 ? (
                     <ul className="space-y-1">
                       {s.enrollments.map((e) => {
                         const endAction = async () => {
@@ -140,20 +165,42 @@ export default async function ParentDetailPage({
                         )
                       })}
                     </ul>
+                  ) : courses.length === 0 ? (
+                    <div className="rounded-md border border-amber-300/40 bg-amber-50 px-3 py-2 text-xs dark:border-amber-500/30 dark:bg-amber-950/30">
+                      Нет ни одного активного курса.{' '}
+                      <Link
+                        href="/courses/new"
+                        className="font-medium underline underline-offset-2"
+                      >
+                        Создать курс
+                      </Link>
+                      .
+                    </div>
+                  ) : (
+                    <div className="rounded-md border border-dashed border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+                      Шаг 2: запишите ребёнка на курс ниже.
+                    </div>
                   )}
                   <AddEnrollmentForm studentId={s.id} courses={courses} />
                 </li>
               ))}
             </ul>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
-      <Card>
+      <Card className={hasStudents ? '' : 'pointer-events-none opacity-60'}>
         <CardHeader>
-          <CardTitle>Платёж</CardTitle>
+          <CardTitle>
+            Платёж
+            {!hasStudents && (
+              <span className="ml-2 rounded bg-muted px-1.5 py-0.5 align-middle text-[10px] font-normal uppercase tracking-wide text-muted-foreground">
+                после ученика
+              </span>
+            )}
+          </CardTitle>
           <CardDescription>
-            «Получили» — деньги уже пришли (создаст оплаченный платёж). «Запланировать» — выставить ожидание без оплаты.
+            «Получили» — деньги уже пришли. «Запланировать» — выставить ожидание без оплаты.
           </CardDescription>
         </CardHeader>
         <CardContent>

@@ -29,7 +29,9 @@ export default async function NewCoursePage() {
         <CardHeader>
           <CardTitle>Новый курс</CardTitle>
           <CardDescription>
-            Только название и стоимость обязательны. Описание — заметка для себя.
+            Это программа, на которую вы записываете учеников. Например: «Английский
+            для младших», «Математика 5–7 лет». Не вписывайте сюда имя ребёнка —
+            учеников добавляйте в разделе «Семьи».
           </CardDescription>
         </CardHeader>
         <CardContent>

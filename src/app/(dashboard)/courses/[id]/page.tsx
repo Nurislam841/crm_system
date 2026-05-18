@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
-import { ArrowLeft, Archive, ArchiveRestore } from 'lucide-react'
+import { ArrowLeft, Archive, ArchiveRestore, Trash2 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -13,6 +13,7 @@ import {
 import { Separator } from '@/components/ui/separator'
 import {
   archiveCourseAction,
+  deleteCourseAction,
   unarchiveCourseAction,
 } from '@/features/courses/actions'
 import { CourseForm } from '@/features/courses/components/course-form'
@@ -38,6 +39,12 @@ export default async function CourseDetailPage({
     'use server'
     await unarchiveCourseAction(id)
   }
+  const hardDelete = async () => {
+    'use server'
+    await deleteCourseAction(id)
+  }
+
+  const canHardDelete = course._count.enrollments === 0
 
   return (
     <div className="mx-auto max-w-xl space-y-4">
@@ -56,6 +63,12 @@ export default async function CourseDetailPage({
             {course.archivedAt
               ? 'Курс в архиве. Новых зачислений не будет, существующие сохранены.'
               : 'Редактирование курса. Изменения не затрагивают уже выставленные платежи.'}
+            {course._count.enrollments > 0 && (
+              <span className="ml-1">
+                На курсе {course._count.enrollments}{' '}
+                {pluralEnrollments(course._count.enrollments)}.
+              </span>
+            )}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -69,26 +82,44 @@ export default async function CourseDetailPage({
             }}
           />
           <Separator className="my-6" />
-          {course.archivedAt ? (
-            <form action={unarchive}>
-              <Button type="submit" variant="outline" size="sm">
-                <ArchiveRestore />
-                Вернуть из архива
-              </Button>
-            </form>
-          ) : (
-            <form action={archive}>
-              <Button type="submit" variant="destructive" size="sm">
-                <Archive />
-                Архивировать
-              </Button>
-              <p className="mt-2 text-xs text-muted-foreground">
-                Курс перестанет появляться в списках, но останется в истории.
-              </p>
-            </form>
-          )}
+          <div className="flex flex-wrap gap-2">
+            {course.archivedAt ? (
+              <form action={unarchive}>
+                <Button type="submit" variant="outline" size="sm">
+                  <ArchiveRestore />
+                  Вернуть из архива
+                </Button>
+              </form>
+            ) : (
+              <form action={archive}>
+                <Button type="submit" variant="outline" size="sm">
+                  <Archive />
+                  Архивировать
+                </Button>
+              </form>
+            )}
+            {canHardDelete && (
+              <form action={hardDelete}>
+                <Button type="submit" variant="destructive" size="sm">
+                  <Trash2 />
+                  Удалить курс
+                </Button>
+              </form>
+            )}
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">
+            {canHardDelete
+              ? 'На курсе нет зачислений — его можно удалить полностью. После добавления первого зачисления останется только архивация.'
+              : 'Курс уже используется — доступна только архивация (история сохранится).'}
+          </p>
         </CardContent>
       </Card>
     </div>
   )
+}
+
+function pluralEnrollments(n: number) {
+  if (n === 1) return 'зачисление'
+  if (n >= 2 && n <= 4) return 'зачисления'
+  return 'зачислений'
 }

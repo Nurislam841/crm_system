@@ -107,3 +107,29 @@ export async function unarchiveCourseAction(id: string) {
   revalidatePath('/courses')
   revalidatePath(`/courses/${id}`)
 }
+
+/**
+ * Hard-delete a course. Only allowed when there are no enrollments.
+ * Use case: clean up mistakenly-created courses before they're used.
+ */
+export async function deleteCourseAction(id: string) {
+  const user = await requireUser()
+  if (user.role !== 'ADMIN') {
+    return { ok: false as const, message: 'Только администратор может удалять курсы' }
+  }
+  const course = await db.course.findFirst({
+    where: { id, tenantId: user.tenantId },
+    select: { id: true, _count: { select: { enrollments: true } } },
+  })
+  if (!course) return { ok: false as const, message: 'Курс не найден' }
+  if (course._count.enrollments > 0) {
+    return {
+      ok: false as const,
+      message:
+        'Нельзя удалить курс — на нём есть зачисления. Используйте «Архивировать».',
+    }
+  }
+  await db.course.delete({ where: { id } })
+  revalidatePath('/courses')
+  redirect('/courses')
+}
